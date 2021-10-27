@@ -1,93 +1,63 @@
 export default class WordSearch {
     constructor(letterGrid) {
         this.letterGrid = letterGrid;
+        this.R = letterGrid.length;
+        this.C = letterGrid[0].length;
+        this.x = [-1, -1, -1, 0, 0, 1, 1, 1];
+        this.y = [-1, 0, 1, -1, 1, -1, 0, 1];
     }
 
     find(words) {
         // TO-DO: Implement searching for specific words in the letterGrid
-        let returnObj = {};
-        words.forEach(word => {
-            const reversedWord = word.split('').reverse().join('');
-            const objToAdd = {
-                [word]: {
-                    start: [],
-                    end: []
+        const returnObj = {};
+        const search2D = (grid, row, col, word) => {
+            let direction;
+            if (grid[row][col] !== word[0]) {
+                return false;
+            }
+            let wordLength = word.length;
+
+            for (let dir = 0; dir < 8; dir++) {
+                let k;
+                let rd = row + this.x[dir];
+                let cd = col + this.y[dir];
+
+                for (k = 1; k < wordLength; k++) {
+                    if (rd >= this.R || rd < 0 || cd >= this.C || cd < 0) {
+                        break;
+                    }
+                    if (grid[rd][cd] !== word[k]) {
+                        break;
+                    }
+                    rd += this.x[dir];
+                    cd += this.y[dir];
+                }
+                if (k === wordLength) {
+                    direction = dir;
+                    return dir;
                 }
             }
-            this.letterGrid.forEach((line, i) => {
-                // word or reversedWord in given line
-                if (line.includes(word)) {
-                    const beginingOfWord = line.indexOf(word) + 1;
-                    objToAdd[word].start = [i + 1, beginingOfWord];
-                    objToAdd[word].end = [i + 1, beginingOfWord + word.length - 1];
-                } else if (line.includes(reversedWord)) {
-                    const beginingOfReversedWord = line.indexOf(reversedWord) + 1;
-                    objToAdd[word].start = [i + 1, beginingOfReversedWord + word.length - 1];
-                    objToAdd[word].end = [i + 1, beginingOfReversedWord];
+            return direction;
+        }
 
-                } else if (line.includes(word[0])) {
-                    const verticalStart = line.indexOf(word[0]);
-                    const verticalStartRevers = line.lastIndexOf(word[0]);
-                    const checkDirections = (start) => {
-                        let vertical = '';
-                        let verticalReversed = '';
-                        let diagonalForward = '';
-                        let diagonalForwardReversed = '';
-                        let diagonalBackward = '';
-                        let diagonalBackwardReversed = '';
-                        word.split('').forEach((letter, letterIndex) => {
-                            if (i + letterIndex < this.letterGrid.length) {
-                                vertical += this.letterGrid[i + letterIndex][start];
-                                diagonalForward += this.letterGrid[i + letterIndex][start + letterIndex];
-                                diagonalBackward += this.letterGrid[i + letterIndex][start - letterIndex];
-                            }
-                            if (i - letterIndex >= 0) {
-                                verticalReversed += this.letterGrid[i - letterIndex][start];
-                                diagonalForwardReversed += this.letterGrid[i - letterIndex][start + letterIndex];
-                                diagonalBackwardReversed += this.letterGrid[i - letterIndex][start - letterIndex];
-                            }
-                        });
-                        if (vertical === word) {
-                            objToAdd[word].start = [i + 1, start + 1];
-                            objToAdd[word].end = [i + word.length, start + 1];
-                        } else if (verticalReversed === word) {
-                            objToAdd[word].start = [i + 1, start + 1];
-                            objToAdd[word].end = [i - word.length + 2, start + 1];
-                        } else if (diagonalForward === word) {
-                            objToAdd[word].start = [i + 1, start + 1];
-                            objToAdd[word].end = [i + word.length, start + word.length];
-                        } else if (diagonalForwardReversed === word) {
-                            objToAdd[word].start = [i + 1, start + 1];
-                            objToAdd[word].end = [i - word.length + 2, start + word.length];
-                        } else if (diagonalBackwardReversed === word) {
-                            objToAdd[word].start = [i + 1, start + 1];
-                            objToAdd[word].end = [i - word.length + 2, start - word.length + 2];
-                        } else if (diagonalBackward === word) {
-                            if (!returnObj[word]) {
-                                objToAdd[word].start = [i + 1, start + 1];
-                                objToAdd[word].end = [i + word.length, start - 2];
-                            }
-                        }
-                    }
-
-                    checkDirections(verticalStart);
-                    checkDirections(verticalStartRevers);
+        const patternSearch = (grid, word) => {
+            for (let row = 0; row < this.R; row++) {
+                for (let col = 0; col < this.C; col++) {
+                    const dir = search2D(grid, row, col, word);
+                    if (dir || dir === 0) {
+                        const end = [0, 0];
+                        if (dir <= 2) end[0] = row - word.length + 2;
+                        else if (dir >= 5) end[0] = row + word.length;
+                        else end[0] = row + 1;
+                        if (dir === 0 || dir === 3 || dir === 5) end[1] = col - word.length + 2;
+                        else if (dir === 1 || dir === 6) end[1] = col + 1;
+                        else end[1] = col + word.length;
+                        returnObj[word] = {start: [row + 1, col + 1], end: end}
+                    } else if (!returnObj[word]) returnObj[word] = undefined;
                 }
-
-                returnObj = {
-                    ...returnObj,
-                    ...objToAdd
-                }
-
-                if (returnObj[word].end.length === 0) {
-                    returnObj = {
-                        ...returnObj,
-                        [word]: undefined
-                    }
-                }
-            });
-        })
-
+            }
+        }
+        words.forEach(word => patternSearch(this.letterGrid, word));
         return returnObj;
     }
 }
